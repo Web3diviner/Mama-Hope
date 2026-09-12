@@ -1,0 +1,1 @@
+ALTER TABLE officials ADD COLUMN IF NOT EXISTS capabilities TEXT[] NOT NULL DEFAULT '{}';

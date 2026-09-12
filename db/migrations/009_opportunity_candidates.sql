@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS opportunity_candidates (
+  id UUID PRIMARY KEY,
+  source_name TEXT NOT NULL,
+  source_url TEXT UNIQUE NOT NULL,
+  title TEXT NOT NULL,
+  summary TEXT NOT NULL,
+  category TEXT NOT NULL,
+  eligibility TEXT,
+  deadline_at TIMESTAMPTZ,
+  music_relevance INTEGER NOT NULL CHECK (music_relevance BETWEEN 0 AND 100),
+  regional_relevance INTEGER NOT NULL CHECK (regional_relevance BETWEEN 0 AND 100),
+  youth_relevance INTEGER NOT NULL CHECK (youth_relevance BETWEEN 0 AND 100),
+  support_value INTEGER NOT NULL CHECK (support_value BETWEEN 0 AND 100),
+  source_credibility INTEGER NOT NULL CHECK (source_credibility BETWEEN 0 AND 100),
+  deadline_viability INTEGER NOT NULL CHECK (deadline_viability BETWEEN 0 AND 5),
+  total_score INTEGER NOT NULL CHECK (total_score BETWEEN 0 AND 100),
+  status TEXT NOT NULL CHECK (status IN ('NEW', 'REVIEW', 'SAVED', 'IGNORED')),
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL
+);
