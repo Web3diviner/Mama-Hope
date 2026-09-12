@@ -326,6 +326,50 @@ export class InboundRouter {
         : 'I currently have access to no active groups.';
       return finish(this.respond(message, reply, correlationId));
     }
+    if (/^\s*(?:all(?:\s+of)?\s+the)?\s*(?:groups?|the groups?)\s+(?:you are|you have access to|you are in)\b/i.test(message.text ?? '')) {
+      const activeGroups = allGroups.filter((group) => group.active);
+      const reply = activeGroups.length
+        ? `I currently have access to ${activeGroups.length} active group${activeGroups.length === 1 ? '' : 's'}:\n${activeGroups.map((group) => `• ${group.name} (${group.whatsappJid})`).join('\n')}`
+        : 'I currently have access to no active groups.';
+      return finish(this.respond(message, reply, correlationId));
+    }
+    const simpleBroadcastText = (() => {
+      const text = (message.text ?? '').trim();
+      const explicitDrop = text.match(/^(?:just\s+)?(?:drop|send|post|publish)\s+(?:a\s+)?(?:message|announcement)?\s*(.+)$/i)?.[1]?.trim();
+      if (explicitDrop) {
+        return explicitDrop
+          .replace(/\b(?:in|to)\s+(?:those|all)\s+(?:groups?|the groups?)\b.*$/i, '')
+          .replace(/\b(?:now|please)\b/gi, '')
+          .trim();
+      }
+      if (/^greetings?$/i.test(text)) {
+        return 'Greetings';
+      }
+      return undefined;
+    })();
+    if (simpleBroadcastText !== undefined) {
+      const visibleGroups = allGroups.filter((group) => group.active);
+      if (!visibleGroups.length) {
+        return finish(this.respond(message, 'I currently have no active groups configured to send a message to.', correlationId));
+      }
+      if (!simpleBroadcastText) {
+        return finish(this.respond(message, 'What message would you like me to send to the active groups?', correlationId));
+      }
+      await Promise.all(visibleGroups.map(async (group) => this.announcements.create(
+        {
+          groupId: group.id,
+          body: simpleBroadcastText,
+          mentionStrategy: 'NONE',
+          sourceMessageId: message.id
+        },
+        { actor: sender, correlationId, sourceMessageId: message.id, originalInput: message.text }
+      )));
+      return finish(this.respond(
+        message,
+        `Done — I sent the message to ${visibleGroups.length} active group${visibleGroups.length === 1 ? '' : 's'}: ${visibleGroups.map((group) => group.name).join(', ')}.`,
+        correlationId
+      ));
+    }
     if (/^\s*(?:remember that|save (?:this|that) (?:to|in) (?:the )?(?:knowledge base|organization knowledge)|track this information(?: in your memory)?)\b/i.test(message.text ?? '')) {
       return finish(this.saveKnowledgeFromMessage(message, sender, correlationId, memory));
     }

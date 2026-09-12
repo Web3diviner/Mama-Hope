@@ -313,6 +313,25 @@ describe('Mama Hope core workflow', () => {
     expect(await container.store.listTasks()).toHaveLength(0);
   });
 
+  it('sends a short direct broadcast to all active groups when the Super Admin says “just drop hi”', async () => {
+    const result = await container.inbound.handle({
+      id: 'admin-broadcast-short-1',
+      chatJid: superAdminJid,
+      senderJid: superAdminJid,
+      text: 'just drop hi',
+      timestamp: currentTime,
+      mentions: []
+    });
+
+    expect(result.reply).toContain('Done — I sent the message');
+    expect((await container.store.listAnnouncements())).toHaveLength(2);
+
+    await container.automation.processDue();
+
+    expect(gateway.sent.some((message) => message.chatJid === '120363000000001@g.us' && message.text.includes('hi'))).toBe(true);
+    expect(gateway.sent.some((message) => message.chatJid === '120363000000002@g.us' && message.text.includes('hi'))).toBe(true);
+  });
+
   it('stores a prior assistant fact when the Super Admin asks to track it in memory', async () => {
     const admin = await container.store.findUserByJid(superAdminJid)!;
     await container.store.saveConversationMemory({
