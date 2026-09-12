@@ -1,0 +1,37 @@
+{
+  "name": "mama-hope",
+  "version": "0.1.0",
+  "private": true,
+  "description": "WhatsApp-first AI team lead and community operations bot",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "node --env-file=.env --import tsx --watch src/main.ts",
+    "start": "node dist/main.js",
+    "worker": "node --env-file=.env --import tsx src/worker.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "db:migrate": "node --env-file=.env --import tsx src/infrastructure/database/migrate.ts",
+    "db:seed": "node --env-file=.env --import tsx src/infrastructure/database/seed.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1123.0",
+    "@whiskeysockets/baileys": "7.0.0-rc14",
+    "fast-xml-parser": "^5.11.1",
+    "fastify": "^5.8.1",
+    "pg": "^8.16.3",
+    "pino": "^9.9.4",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "@types/pg": "^8.15.5",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}

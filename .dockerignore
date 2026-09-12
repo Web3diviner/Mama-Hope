@@ -1,0 +1,11 @@
+.git
+.codex
+node_modules
+dist
+data
+coverage
+.env
+.env.*
+*.log
+test
+MAMA_HOPE_DEVELOPER_PRD.md
