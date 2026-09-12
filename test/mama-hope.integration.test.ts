@@ -313,6 +313,35 @@ describe('Mama Hope core workflow', () => {
     expect(await container.store.listTasks()).toHaveLength(0);
   });
 
+  it('stores a prior assistant fact when the Super Admin asks to track it in memory', async () => {
+    const admin = await container.store.findUserByJid(superAdminJid)!;
+    await container.store.saveConversationMemory({
+      id: 'memory-trace-date',
+      scopeKey: `admin:${admin!.id}:${superAdminJid}`,
+      userId: admin!.id,
+      groupId: undefined,
+      turns: [
+        { role: 'assistant', content: 'Today’s date is 2026-09-12.', createdAt: currentTime }
+      ],
+      expiresAt: new Date(currentTime.getTime() + 30 * 60 * 1000),
+      createdAt: currentTime,
+      updatedAt: currentTime
+    });
+
+    const result = await container.inbound.handle({
+      id: 'admin-memory-track-1',
+      chatJid: superAdminJid,
+      senderJid: superAdminJid,
+      text: 'Track this information in your memory',
+      timestamp: currentTime,
+      mentions: []
+    });
+
+    expect(result.reply).toContain('Saved. I’ll use');
+    const knowledge = await container.store.searchOrganizationKnowledge('2026-09-12', 5);
+    expect(knowledge.some((item) => item.content.includes('2026-09-12'))).toBe(true);
+  });
+
   it('welcomes new community members with their registered name and mention', async () => {
     await container.inbound.handleGroupParticipants({
       groupJid: '120363000000002@g.us',

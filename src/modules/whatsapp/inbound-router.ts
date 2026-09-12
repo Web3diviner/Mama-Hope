@@ -326,8 +326,8 @@ export class InboundRouter {
         : 'I currently have access to no active groups.';
       return finish(this.respond(message, reply, correlationId));
     }
-    if (/^\s*(?:remember that|save (?:this|that) (?:to|in) (?:the )?(?:knowledge base|organization knowledge))\b/i.test(message.text ?? '')) {
-      return finish(this.saveKnowledgeFromMessage(message, sender, correlationId));
+    if (/^\s*(?:remember that|save (?:this|that) (?:to|in) (?:the )?(?:knowledge base|organization knowledge)|track this information(?: in your memory)?)\b/i.test(message.text ?? '')) {
+      return finish(this.saveKnowledgeFromMessage(message, sender, correlationId, memory));
     }
     if (/\b(?:plan (?:my|the|our) day|today'?s plan|operations brief|brief me)\b/i.test(message.text ?? '')) {
       const snapshot = await this.planning.dailySnapshot();
@@ -427,9 +427,11 @@ export class InboundRouter {
   private async saveKnowledgeFromMessage(
     message: InboundMessage,
     sender: User,
-    correlationId: string
+    correlationId: string,
+    memory?: { turns?: Array<{ role: 'user' | 'assistant'; content: string }> }
   ): Promise<InboundHandlingResult> {
-    const content = (message.text ?? '').replace(/^\s*(?:remember that|save (?:this|that) (?:to|in) (?:the )?(?:knowledge base|organization knowledge))\s*[:,-]?\s*/i, '').trim();
+    const stripped = (message.text ?? '').replace(/^\s*(?:remember that|save (?:this|that) (?:to|in) (?:the )?(?:knowledge base|organization knowledge)|track this information(?: in your memory)?)\s*[:,-]?\s*/i, '').trim();
+    const content = stripped || [...(memory?.turns ?? [])].reverse().find((turn) => turn.role === 'assistant')?.content?.trim() || '';
     if (!content) return this.respond(message, 'What information should I add to the organization knowledge base?', correlationId);
     const title = content.split(/[.!?\n]/).find(Boolean)?.trim().slice(0, 120) ?? 'Organization note';
     const now = this.now();
