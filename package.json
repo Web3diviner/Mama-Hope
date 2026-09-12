@@ -21,10 +21,8 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1123.0",
     "@whiskeysockets/baileys": "7.0.0-rc14",
-    "bullmq": "^5.71.1",
     "fast-xml-parser": "^5.11.1",
     "fastify": "^5.8.1",
-    "ioredis": "^5.8.2",
     "pg": "^8.16.3",
     "pino": "^9.9.4",
     "zod": "^3.24.2"

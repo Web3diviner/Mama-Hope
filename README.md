@@ -8,7 +8,7 @@ The full product blueprint is in [MAMA_HOPE_DEVELOPER_PRD.md](./MAMA_HOPE_DEVELO
 
 - Fastify/TypeScript service with strict request validation and structured errors.
 - PostgreSQL migrations and a durable repository for users, groups, tasks, task assignments, submissions, attachments, announcements, opportunities, jobs, and audit logs.
-- Redis/BullMQ scheduling adapter plus a durable PostgreSQL job ledger. The bot process polls due ledger entries as a recovery path, so a delayed job is never silently lost.
+- Durable PostgreSQL job ledger scheduling. The bot process polls and atomically claims due ledger entries, so scheduled work survives restarts without a separate queue service.
 - Core task lifecycle: create, schedule, publish, mention officials, remind, accept submission, track blockers, mark overdue, complete, cancel, and report.
 - Community announcements, configurable mention strategies, active opportunity records, and media attachments.
 - A Groq natural-language provider with strict structured extraction, a stable primary personality model, model failover, and a safe rule-based fallback.
@@ -28,7 +28,7 @@ src/
   infrastructure/
     whatsapp/           # Memory + Baileys gateway adapters
     store/              # memory + PostgreSQL stores
-    scheduler/          # memory + BullMQ schedulers
+    scheduler/          # PostgreSQL-ledger scheduler
     media/              # local filesystem + S3-compatible storage
     database/           # migration and seed commands
   http/                 # protected internal/admin HTTP API
@@ -38,7 +38,7 @@ test/                   # end-to-end local MVP tests
 
 ## Local quick start
 
-Requirements: Node.js 22+, npm, and optionally Docker Desktop for PostgreSQL/Redis.
+Requirements: Node.js 22+, npm, and optionally Docker Desktop for PostgreSQL.
 
 ```powershell
 Copy-Item .env.example .env
@@ -60,7 +60,7 @@ Set a real long `INTERNAL_API_TOKEN`, your own `SUPER_ADMIN_WHATSAPP_JID`, and a
 
 The service runs at `http://localhost:3000`.
 
-The memory store is only for local testing and is intentionally rejected when `NODE_ENV=production`. Production requires PostgreSQL and Redis so task records and scheduled work survive restarts. The readiness endpoint reports whether storage and scheduling are durable.
+The memory store is only for local testing and is intentionally rejected when `NODE_ENV=production`. Production requires PostgreSQL so task records and scheduled work survive restarts. The readiness endpoint reports whether storage and scheduling are durable.
 
 ## Groq AI
 
@@ -124,12 +124,12 @@ Invoke-RestMethod http://localhost:3000/v1/admin/tasks -Method Post -Headers $he
 
 For a controlled inbound simulation, post a normalised WhatsApp message to `POST /v1/internal/whatsapp/inbound` with the same token. This route is not for public exposure.
 
-## PostgreSQL and Redis
+## PostgreSQL
 
 Start local dependencies:
 
 ```powershell
-docker compose up -d postgres redis
+docker compose up -d postgres
 ```
 
 Update `.env`:
@@ -137,7 +137,6 @@ Update `.env`:
 ```dotenv
 STORE_DRIVER=postgres
 DATABASE_URL=postgresql://mama_hope:local-dev-password@localhost:5432/mama_hope
-REDIS_URL=redis://localhost:6379
 ```
 
 Then run:
@@ -190,9 +189,9 @@ Inbound files are stored before they are linked to a task submission. Scheduled 
 
 ## Production deployment
 
-The checked-in Compose setup is production-oriented: PostgreSQL and Redis are private to the Docker network, Redis requires authentication and persists its queue, the API is non-root with a read-only filesystem, and the API port is bound to loopback by default. Run exactly one API/bot replica; a second Baileys process must never share the WhatsApp session.
+The checked-in Compose setup is production-oriented: PostgreSQL is private to the Docker network and stores operational records plus the durable job ledger; the API is non-root with a read-only filesystem, and the API port is bound to loopback by default. The Dockerfile is at the repository root, which also matches Render's default Dockerfile location. Run exactly one API/bot replica; a second Baileys process must never share the WhatsApp session.
 
-1. Copy `.env.production.example` to `.env.production` and replace every placeholder. Use URL-encoded values in `DATABASE_URL` and `REDIS_URL` when passwords contain URL-reserved characters.
+1. Copy `.env.production.example` to `.env.production` and replace every placeholder. Use a URL-encoded value in `DATABASE_URL` when its password contains URL-reserved characters.
 2. Keep `WHATSAPP_SEND_ENABLED=false` while pairing and validating in a staging group. Configure a dedicated bot number, S3/R2 media storage, and a token of at least 32 random characters.
 3. Start the stack with the production environment file:
 
@@ -209,7 +208,7 @@ Invoke-RestMethod http://127.0.0.1:3000/health/live
 
 Migrations run before the bot starts. Provision the real Super Admin and group records before enabling outbound messaging; do not run the demo seed in production.
 
-Put a TLS reverse proxy with an identity layer in front of the API if it must be reached off-host. Do not expose PostgreSQL, Redis, `/v1/internal/whatsapp/inbound`, or the admin API directly to the internet. Back up PostgreSQL and the encrypted WhatsApp session volume, test restoration, and rotate database, Redis, S3, AI, calendar, and internal API credentials on a defined schedule.
+Put a TLS reverse proxy with an identity layer in front of the API if it must be reached off-host. Do not expose PostgreSQL, `/v1/internal/whatsapp/inbound`, or the admin API directly to the internet. Back up PostgreSQL and the encrypted WhatsApp session volume, test restoration, and rotate database, S3, AI, calendar, and internal API credentials on a defined schedule.
 
 ## Verification
 

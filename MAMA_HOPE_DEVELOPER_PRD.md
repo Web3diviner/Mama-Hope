@@ -33,7 +33,7 @@ Mama Hope has a warm, feminine personality, but always identifies herself honest
 - Task creation, review/confirmation, scheduling, reminders, submissions, status updates, cancellation, and reports.
 - Scheduled announcements/opportunities with text, links, images, documents, and mention policy.
 - Natural-language interpretation, bot-directed Q&A, short conversation memory, and retrieval from an organisation knowledge base.
-- PostgreSQL-backed records, Redis/BullMQ workers, attachments in S3-compatible object storage, Docker deployment, and structured logs.
+- PostgreSQL-backed records and durable scheduled-job ledger, attachments in S3-compatible object storage, Docker deployment, and structured logs.
 
 ### Explicit MVP non-goals
 
@@ -54,12 +54,12 @@ Use a modular monolith first. It is substantially easier to operate than microse
 | HTTP/API | NestJS using the Fastify adapter |
 | WhatsApp | A `WhatsAppGateway` adapter backed initially by a version-pinned Baileys integration |
 | Durable data | PostgreSQL 16 |
-| Queue / scheduled work | Redis 7 + BullMQ |
+| Queue / scheduled work | PostgreSQL durable job ledger, polled and atomically claimed by the bot process |
 | File storage | S3-compatible object storage, such as Cloudflare R2 |
 | AI | Provider-independent `AIProvider` interface with structured JSON output |
 | Validation | Zod DTO schemas at every boundary |
 | Logging | Pino JSON logs plus immutable audit rows |
-| Monitoring | Sentry, health/readiness endpoints, and worker queue metrics |
+| Monitoring | Sentry, health/readiness endpoints, and scheduled-job failure metrics |
 | Deployment | Docker Compose for development; Docker images on a VPS, Railway, Render, Hetzner, or DigitalOcean |
 
 ### 3.1 Component layout
@@ -79,7 +79,7 @@ Auth / Permission Gate             |
           v                         |
 Intent + Entity Extraction -------> AI provider
           |
-          +--> Task module ---------+--> BullMQ / Redis workers
+          +--> Task module ---------+--> PostgreSQL job ledger
           +--> Community module ----+--> Object storage
           +--> Knowledge module ----+--> retrieval index (optional later)
           +--> Reporting module ----+--> WhatsAppGateway
@@ -557,7 +557,7 @@ WhatsApp is the primary user-facing interface. These HTTP endpoints support heal
 | Method / route | Purpose |
 | --- | --- |
 | `GET /health/live` | Process is running |
-| `GET /health/ready` | PostgreSQL, Redis, and WhatsApp state readiness |
+| `GET /health/ready` | PostgreSQL durable-storage and WhatsApp state readiness |
 | `GET /v1/whatsapp/status` | Pairing / connected status (restricted) |
 | `POST /v1/whatsapp/reconnect` | Request a reconnect (restricted) |
 | `POST /v1/internal/whatsapp/inbound` | Normalised inbound test/webhook entry point; internal-only |
@@ -906,7 +906,6 @@ ORGANIZATION_NAME=Hope
 ORGANIZATION_TIMEZONE=Africa/Lagos
 
 DATABASE_URL=postgresql://mama_hope:change-me@postgres:5432/mama_hope
-REDIS_URL=redis://redis:6379
 
 SUPER_ADMIN_WHATSAPP_JID=234XXXXXXXXXX@s.whatsapp.net
 WHATSAPP_SESSION_DIR=/data/whatsapp-session
@@ -1013,7 +1012,7 @@ Developer workflow:
 - [ ] Reminder and overdue flows exercised end-to-end.
 - [ ] S3 media upload, scan, and retrieval tested.
 - [ ] PostgreSQL backups enabled and restore tested.
-- [ ] Redis persistence and worker restart behaviour tested.
+- [ ] PostgreSQL job recovery and bot restart behaviour tested.
 - [ ] Baileys version pinned after staging validation; upgrades require a staging regression run.
 - [ ] Sentry alerts configured for WhatsApp disconnects, failed critical jobs, and repeated AI-provider failure.
 - [ ] Retention/privacy notice and community moderation rules approved.

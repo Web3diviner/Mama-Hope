@@ -134,7 +134,7 @@ export const buildServer = (container: AppContainer) => {
       whatsappConnected: ready,
       storageDriver: container.config.STORE_DRIVER,
       durableStorage: container.config.STORE_DRIVER === 'postgres',
-      scheduler: container.config.REDIS_URL ? 'redis' : 'memory',
+      scheduler: container.config.STORE_DRIVER === 'postgres' ? 'postgres-ledger' : 'memory',
       aiProvider: container.config.AI_PROVIDER,
       outboundEnabled: container.config.WHATSAPP_SEND_ENABLED
     });

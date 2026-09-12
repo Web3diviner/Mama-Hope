@@ -5,8 +5,7 @@ import type { AIProvider, JobScheduler, MediaStore, OperationsStore, WhatsAppGat
 import type { InboundMessage } from './domain/types.js';
 import { RuleBasedAIProvider } from './infrastructure/ai/rule-based-ai-provider.js';
 import { GroqAIProvider } from './infrastructure/ai/groq-ai-provider.js';
-import { BullMqScheduler } from './infrastructure/scheduler/bullmq-scheduler.js';
-import { InMemoryScheduler } from './infrastructure/scheduler/in-memory-scheduler.js';
+import { LedgerScheduler } from './infrastructure/scheduler/ledger-scheduler.js';
 import { InMemoryOperationsStore } from './infrastructure/store/in-memory-operations-store.js';
 import { PostgresOperationsStore } from './infrastructure/store/postgres-operations-store.js';
 import { LocalMediaStore } from './infrastructure/media/local-media-store.js';
@@ -84,9 +83,9 @@ export const createContainer = (config: AppConfig, overrides: ContainerOverrides
   const store = overrides.store ?? (config.STORE_DRIVER === 'postgres'
     ? new PostgresOperationsStore(config.DATABASE_URL!)
     : new InMemoryOperationsStore());
-  const scheduler = overrides.scheduler ?? (config.STORE_DRIVER === 'postgres' && config.REDIS_URL
-    ? new BullMqScheduler(config.REDIS_URL)
-    : new InMemoryScheduler());
+  // Scheduled jobs are persisted in OperationsStore. The process polls and
+  // atomically claims due ledger rows, avoiding a separate queue dependency.
+  const scheduler = overrides.scheduler ?? new LedgerScheduler();
   const mediaStore = overrides.mediaStore ?? (config.MEDIA_DRIVER === 's3'
     ? new S3MediaStore({
       endpoint: config.S3_ENDPOINT!,

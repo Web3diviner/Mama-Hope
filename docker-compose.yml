@@ -16,26 +16,10 @@ services:
     security_opt:
       - no-new-privileges:true
 
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env.production}"]
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD-SHELL", "redis-cli --no-auth-warning -a \"$$REDIS_PASSWORD\" ping | grep PONG"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-    environment:
-      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env.production}
-    security_opt:
-      - no-new-privileges:true
-
   api:
     build:
       context: .
-      dockerfile: docker/Dockerfile
+      dockerfile: Dockerfile
     restart: unless-stopped
     env_file:
       - .env.production
@@ -47,8 +31,6 @@ services:
       - "${API_BIND_ADDRESS:-127.0.0.1}:3000:3000"
     depends_on:
       postgres:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     volumes:
       - whatsapp_session:/data/whatsapp-session
@@ -68,5 +50,4 @@ services:
 
 volumes:
   postgres_data:
-  redis_data:
   whatsapp_session:

@@ -12,7 +12,6 @@ const schema = z.object({
   ORGANIZATION_TIMEZONE: z.string().min(1).default('Africa/Lagos'),
   STORE_DRIVER: z.enum(['memory', 'postgres']).default('memory'),
   DATABASE_URL: optionalValue(z.string().url()),
-  REDIS_URL: optionalValue(z.string().url()),
   SUPER_ADMIN_WHATSAPP_JID: z.string().min(5),
   BOT_WHATSAPP_JID: z.string().min(5),
   INTERNAL_API_TOKEN: z.string().min(16),
@@ -58,9 +57,6 @@ export const loadConfig = (values: NodeJS.ProcessEnv = process.env): AppConfig =
   }
   if (result.data.NODE_ENV === 'production' && result.data.STORE_DRIVER !== 'postgres') {
     throw new Error('Production requires STORE_DRIVER=postgres so tasks and schedules survive restarts.');
-  }
-  if (result.data.NODE_ENV === 'production' && !result.data.REDIS_URL) {
-    throw new Error('Production requires REDIS_URL for durable scheduled-job delivery.');
   }
   if (result.data.NODE_ENV === 'production' && result.data.WHATSAPP_GATEWAY !== 'baileys') {
     throw new Error('Production requires WHATSAPP_GATEWAY=baileys; the memory gateway is only for development and tests.');
