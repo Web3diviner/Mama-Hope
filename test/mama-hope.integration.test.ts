@@ -324,10 +324,8 @@ describe('Mama Hope core workflow', () => {
     });
 
     expect(result.reply).toContain('Done — I sent the message');
-    expect((await container.store.listAnnouncements())).toHaveLength(2);
-
-    await container.automation.processDue();
-
+    expect(await container.store.listAnnouncements()).toHaveLength(0);
+    expect(gateway.sent.filter((message) => message.text.includes('hi'))).toHaveLength(2);
     expect(gateway.sent.some((message) => message.chatJid === '120363000000001@g.us' && message.text.includes('hi'))).toBe(true);
     expect(gateway.sent.some((message) => message.chatJid === '120363000000002@g.us' && message.text.includes('hi'))).toBe(true);
   });

@@ -355,15 +355,11 @@ export class InboundRouter {
       if (!simpleBroadcastText) {
         return finish(this.respond(message, 'What message would you like me to send to the active groups?', correlationId));
       }
-      await Promise.all(visibleGroups.map(async (group) => this.announcements.create(
-        {
-          groupId: group.id,
-          body: simpleBroadcastText,
-          mentionStrategy: 'NONE',
-          sourceMessageId: message.id
-        },
-        { actor: sender, correlationId, sourceMessageId: message.id, originalInput: message.text }
-      )));
+      await Promise.all(visibleGroups.map(async (group) => this.gateway.sendText({
+        chatJid: group.whatsappJid,
+        text: simpleBroadcastText,
+        correlationId
+      })));
       return finish(this.respond(
         message,
         `Done — I sent the message to ${visibleGroups.length} active group${visibleGroups.length === 1 ? '' : 's'}: ${visibleGroups.map((group) => group.name).join(', ')}.`,
