@@ -319,6 +319,13 @@ export class InboundRouter {
     if (/^\s*(?:add|register)\b/i.test(message.text ?? '') && /\+?\d[\d\s-]{8,}/.test(message.text ?? '')) {
       return finish(this.registerOfficialFromMessage(message, sender, correlationId));
     }
+    if (/\b(?:how many groups|what groups|which groups)\b.*\b(?:do you have access to|are you in|can you access)\b/i.test(message.text ?? '')) {
+      const activeGroups = allGroups.filter((group) => group.active);
+      const reply = activeGroups.length
+        ? `I currently have access to ${activeGroups.length} active group${activeGroups.length === 1 ? '' : 's'}:\n${activeGroups.map((group) => `• ${group.name} (${group.whatsappJid})`).join('\n')}`
+        : 'I currently have access to no active groups.';
+      return finish(this.respond(message, reply, correlationId));
+    }
     if (/^\s*(?:remember that|save (?:this|that) (?:to|in) (?:the )?(?:knowledge base|organization knowledge))\b/i.test(message.text ?? '')) {
       return finish(this.saveKnowledgeFromMessage(message, sender, correlationId));
     }
